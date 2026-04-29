@@ -1,19 +1,21 @@
 # DEMO SCRIPT — Session 2: GitHub Copilot in the IDE for IaC
-### Presenter Guide
+### Presenter Guide · Bicep Focus
 
 ---
 
 ## Before You Start
 
 - Clone repo, open in VS Code
-- Ensure Copilot Chat panel is visible (Ctrl+Alt+I)
-- Have a second monitor or window for showing Copilot Chat
+- Ensure Copilot Chat panel is visible (`Ctrl+Alt+I`)
+- Have a second monitor/window for showing Copilot Chat responses
 - Open these files in tabs before presenting:
   - `.github/copilot-instructions.md`
-  - `terraform/00-start-here/main.tf`
-  - `terraform/01-scaffold-example/main.tf`
+  - `bicep/00-start-here/main.bicep`
+  - `bicep/01-scaffold-example/main.bicep`
   - `bicep/02-explain-exercise/main.bicep`
-  - `terraform/03-security-review/main.tf`
+  - `bicep/02-refactor-before/main.bicep`
+  - `bicep/03-security-review/main.bicep`
+  - `bicep/04-modules/main.bicep`
 
 ---
 
@@ -27,241 +29,314 @@
 
 Open the file. Walk through each section:
 - Landing zone constraints encoded as text
-- Naming conventions
-- Tag requirements
+- Naming conventions (`kv-{workload}-{env}-{region}`)
+- Mandatory tags, TLS requirements, network posture
 
-> "This file is loaded into Copilot's context automatically for every chat interaction in this workspace. Think of it as a standing brief to your pair-programmer. It means you don't have to repeat 'no public endpoints' in every prompt — it's already there."
+> "This file is loaded into Copilot's context automatically for every chat interaction in this workspace. Think of it as a standing brief to your pair-programmer. You don't have to repeat 'no public endpoints' in every prompt — it's already there. For a team maintaining 50 Bicep files, this is significant."
 
 **Step 2 — Show `.vscode/extensions.json`**
 
-> "When a teammate clones this repo and opens it in VS Code, they'll be prompted to install the recommended extensions. The Terraform and Bicep extensions give Copilot richer language understanding — syntax validation, go-to-definition, hover docs. All of this becomes additional context."
+> "When a teammate clones this repo and opens it in VS Code, they're prompted to install the Bicep extension. That extension gives Copilot richer understanding — API version awareness, resource type completion, go-to-definition. All of this becomes additional context for suggestions."
 
 **Step 3 — Open related files side by side**
 
-Open `terraform/01-scaffold-example/main.tf` and `terraform/01-scaffold-example/variables.tf` side by side.
+Open `bicep/01-scaffold-example/main.bicep` alongside `bicep/01-scaffold-example/main.parameters.json`.
 
-> "Copilot sees everything in your open editor tabs. If `variables.tf` is open when you're editing `main.tf`, Copilot knows your variable names, types, and validation rules. Open the files you want it to reason about."
-
----
-
-## Module 2: Prompting Patterns (~25 min)
-
-### Pattern 1 — Scaffold from Intent
-
-**Open `terraform/00-start-here/main.tf`**
-
-> "This is the blank canvas. The comment block at the top describes what we want to build. Watch what happens when I start typing the resource declaration."
-
-Type slowly:
-```
-resource "azurerm_storage_account" "diag" {
-```
-
-Accept completions one by one. After the block is complete:
-
-> "It got most of the required arguments. But notice — did it set `public_network_access_enabled = false`? Did it set `min_tls_version`? This is the review step. Copilot gives you a fast first draft; you own the correctness."
-
-**Switch to `terraform/01-scaffold-example/main.tf`**
-
-> "Here's the same resource generated from a more structured prompt — notice the comment at the top of the file shows the exact prompt used. The prompt included explicit constraints, and the output reflects them. The quality of the output is a direct function of the quality of the prompt."
+> "Copilot sees everything in your open editor tabs. Open the files you want it to reason about."
 
 ---
 
-### Pattern 2 — Iterative Refactoring
+## Module 2: Prompting Patterns (~20 min)
 
-**Open `terraform/02-refactor-before/main.tf`**
+### Pattern 1 — Weak vs. Strong Prompts
 
-> "Real-world IaC files have hard-coded values everywhere. Here's a typical example. I'm going to use Copilot Chat in three steps — each step produces a reviewable output before we move to the next."
+**Open `bicep/00-start-here/main.bicep`**
+
+> "The comment block at the top describes exactly what we want to build. Let me first show what a weak prompt produces, then use the structured version."
+
+**Weak prompt** — type at the bottom of the file:
+```bicep
+// create a container app
+resource app 'Microsoft.App/containerApps@2024-03-01' = {
+```
+
+Let Copilot complete. Show the output — likely missing ingress, scale rules, identity.
+
+> "It created *something*. But notice what's missing: no ingress config, no scale rules, no managed identity, no Dapr. This is fixable, but now you're in a discovery loop instead of a validation loop."
+
+**Strong prompt** — undo, then use the comment already in the file. Start typing:
+```bicep
+resource ordersApp 'Microsoft.App/containerApps@2024-03-01' = {
+```
+
+Accept completions. Walk through what Copilot includes this time.
+
+> "The quality of the output is a direct function of the quality of the prompt. The structured comment at the top is the prompt."
+
+**Switch to `bicep/01-scaffold-example/main.bicep`**
+
+> "Here's the completed version — the comment at the top shows the exact prompt used. Notice `guid()` in the role assignment name. Let's ask Copilot to explain that."
+
+In Copilot Chat:
+```
+Explain why guid() is used in the role assignment resource name
+and what would happen if I used a static string instead.
+```
+
+> "Idempotency — every IaC practitioner needs this intuition. Copilot explained it better than most documentation."
+
+---
+
+### Pattern 2 — Policy-Aware Generation
+
+> "One prompting technique that cuts review time significantly."
+
+In Copilot Chat:
+```
+Context: regulated Azure landing zone
+Constraints:
+  - Tags required: env, owner, cost-center
+  - No public endpoints
+  - Encryption at rest on all storage
+  - Minimum TLS 1.2
+  - RBAC only — no Key Vault access policies
+
+Generate a Bicep resource block for an Azure Key Vault
+that meets all of these constraints.
+```
+
+> "When you front-load constraints, Copilot encodes your policy as code rather than leaving compliance as a post-review discovery step."
+
+Compare the output to `bicep/03-security-review/main.bicep` — show the contrast.
+
+---
+
+### Pattern 3 — Iterative Refactoring (3-step sequence)
+
+**Open `bicep/02-refactor-before/main.bicep`**
+
+> "Real Bicep files accumulate hard-coded values. I'll use three prompts — each produces a reviewable output."
 
 **Step 1 — in Copilot Chat:**
 ```
-Identify all hard-coded values in this file that should be variables.
-List them as a table: name | current value | suggested type | description
+Identify all hard-coded values in this Bicep file that should be params or vars.
+List as a table: name | current value | suggested type (param/var) | description
 ```
 
-Wait for response. Show the table to audience.
-
-> "Before we generate a single line of code, we agree on what needs to change. This is the design step."
+Show table. Ask: "Did it miss anything?"
 
 **Step 2:**
 ```
-Generate the variable declarations for all items in that table.
-Use validation blocks where the value has a constrained set of options.
+Generate param declarations for all items marked 'param' in that table.
+Add @allowed() decorators where the value has a constrained set of options.
+Add @description() to every param.
 ```
 
-> "Notice the validation blocks — Copilot added them because the comment context told it this is a regulated landing zone. It's using the workspace instructions."
+> "Notice @allowed() — Bicep's equivalent of Terraform's validation block."
 
 **Step 3:**
 ```
-Now update the resource blocks in the file to reference these new variables
-instead of the hard-coded values.
+Update the resource blocks to reference the new params and vars
+instead of hard-coded values. Use var for any values derived from params.
 ```
 
-> "Three prompts, three reviewable outputs. At no point did we apply a change we hadn't seen. This mirrors the PR review discipline we already practice."
+> "Three prompts, three reviewable outputs. This mirrors PR discipline."
 
 ---
 
-### Pattern 3 — Policy-Aware Generation
+## Module 3: Explain and Learn (~15 min)
 
-> "One more prompting technique that saves significant review time."
-
-In Copilot Chat, paste:
-```
-Context: This module deploys into a regulated Azure landing zone.
-Constraints:
-  - All resources must have tags: env, owner, cost-center
-  - No public endpoints on any resource
-  - Encryption at rest required on all storage
-  - Minimum TLS 1.2
-
-Generate a Terraform module for an Azure Key Vault that meets all of these constraints.
-```
-
-> "When you front-load the constraints, Copilot encodes your policy as code rather than leaving compliance as a post-review step. You still review — but you're validating, not discovering."
-
----
-
-## Module 3: Explain and Learn (~20 min)
-
-### Demo 1 — Explain a Complex File
+### Demo 1 — The "Why" Engine
 
 **Open `bicep/02-explain-exercise/main.bicep`**
 
-Select the entire file content → Copilot Chat → type:
+Select the entire file → Copilot Chat:
 ```
 /explain
 ```
 
-> "This is my favourite use of Copilot for existing codebases. It's a knowledge extraction tool. Every team has files that only one person truly understands. Copilot can give everyone a starting point."
+> "Every team has files only one person truly understands. Copilot gives everyone a starting point."
 
-After the explanation, ask:
+After the explanation, drill in with targeted questions:
+
+**Question 1:**
 ```
-What does the dependsOn on the 'secret' resource do, and is it actually needed
-given Bicep's implicit dependency resolution?
+What does the @secure() decorator on bootstrapSecret do?
+What happens to the value in deployment logs without it?
 ```
 
-> "That's a question a senior engineer would ask in a PR review. Copilot's answer here is: you're right, it's redundant because the parent relationship already implies the dependency — but it's explicit documentation of intent. This is the kind of nuanced discussion Copilot can accelerate."
+> "Without @secure(), the value appears in plain text in ARM deployment history — accessible to anyone with read access to the resource group. This is a real finding in production environments."
 
-Then ask:
+**Question 2:**
 ```
-What is the purpose of the guid() function in the role assignment resource name,
+What does the dependsOn on the 'bootstrapKvSecret' resource do?
+Is it actually needed given Bicep's implicit dependency resolution?
+```
+
+> "Answer: it's redundant — the parent relationship already creates an implicit dependency. But it's explicit documentation of intent. This discussion normally takes 10 minutes in a PR; we just had it in 30 seconds."
+
+**Question 3:**
+```
+What is the purpose of guid() in the role assignment name,
 and what happens if I deploy this twice to the same scope?
 ```
 
-> "Idempotency — a concept every IaC practitioner needs to understand. Copilot just became your teaching tool for onboarding new team members."
+**Question 4 — Learning prompt:**
+```
+I'm new to Bicep. What is the difference between a param and a var in this file,
+and how do I decide which one to use?
+```
+
+> "Copilot as onboarding tool. New engineers can /explain any file and get a tutor."
 
 ---
 
 ### Demo 2 — Security Review
 
-**Open `terraform/03-security-review/main.tf`**
+**Open `bicep/03-security-review/main.bicep`**
 
-> "This file has a number of intentional security issues. Let's see how many Copilot can find."
+> "This file has eight intentional security issues. Let's see how many Copilot finds."
 
 Select all → Copilot Chat:
 ```
-Review this Terraform file for security concerns and missing Azure best practices.
+Review this Bicep file for security concerns and missing Azure best practices.
 List findings as: Severity | Issue | Recommendation
 ```
 
-Walk through the findings with the audience. Tick off which ones it caught:
+Walk through findings with the audience. Tick off:
 - [ ] Public blob access enabled
-- [ ] HTTPS not enforced
-- [ ] No soft delete
-- [ ] Overly permissive NSG rule (allow-all inbound)
+- [ ] HTTPS not enforced (supportsHttpsTrafficOnly missing)
+- [ ] Minimum TLS not set
+- [ ] No blob soft delete
+- [ ] NSG allow-all inbound rule
 - [ ] Key Vault purge protection disabled
-- [ ] No network ACLs on Key Vault
-- [ ] Sensitive output not marked `sensitive = true`
-- [ ] Storage account name hard-coded (not parameterised)
+- [ ] Key Vault public network access open
+- [ ] Output exposes a connection string (secret in plain text)
 
-> "It found most of them. Note what it might miss — this is not a replacement for Checkov or tfsec. Those tools run in your pipeline on every commit, regardless of how the code was authored. Copilot is your first-pass reviewer; static analysis is your gate."
+> "The last one — a connection string in an output — flows into ARM deployment history and any pipeline logs. Now ask:"
+
+```
+How should I fix the connection string output? What's the recommended pattern
+for granting an application access to storage without using connection strings?
+```
+
+> "Answer: RBAC + managed identity. Copilot just taught the right pattern."
 
 ---
 
-## Module 4: Workflow and Boundaries (~20 min)
+## Module 4: Bicep Modules (~15 min)
 
-### The Review Contract — Discussion Slide
+**Open `bicep/04-modules/main.bicep` and `bicep/04-modules/modules/storage.bicep`**
 
-> "Let's talk about where Copilot adds the most value versus where you need to be careful."
+> "Bicep modules let you package reusable resource definitions. This exercise is Bicep-native — there's no Terraform equivalent in this repo. Copilot is excellent here because modules have a very regular structure."
 
-Draw or show this on screen:
+**Step 1 — Fill the storage module:**
 
+Open `modules/storage.bicep` → Copilot Chat:
 ```
-[Copilot] → draft resource
-     ↓
-[terraform validate / bicep build] — catch syntax errors
-     ↓
-[terraform plan / az deployment what-if] — verify intent
-     ↓
-[Checkov / tfsec / PSRule] — policy gate (non-negotiable)
-     ↓
-[PR review] — human judgment on design and security
-     ↓
-[Pipeline apply] — approved change deployed
+Fill out this Bicep module for an Azure Storage Account.
+Params: workloadName, environmentCode, locationCode, location, tags.
+Derive the storage name as 'st{workloadName}{environmentCode}{locationCode}'.
+Disable public access, enforce HTTPS, TLS 1.2, blob soft delete 7 days.
+System-assigned identity.
+Outputs: storageAccountId, storageAccountName, principalId.
 ```
 
-> "Copilot accelerates step one. It does not replace any downstream step. This is the conversation to have with your team before you adopt it."
+> "Ask why it derived the name inside the module instead of accepting it as a param:"
 
-### High Value / Use Caution Table — Discussion
+```
+Why is it better to derive the storage account name inside the module
+rather than accepting it as a parameter from the caller?
+```
 
-Walk through this with the audience and ask for their additions:
+> "Answer: the module enforces the naming convention regardless of who calls it. The caller can't accidentally pass a non-compliant name."
 
-**High Value:**
-- First draft of a resource block
-- Variable and output boilerplate
-- Module skeleton scaffolding
-- Inline documentation (`description` fields)
-- Translating between DSLs (ARM → Bicep, TF → Pulumi concepts)
-- Understanding unfamiliar or legacy code
-- Writing test scaffolding (Terratest, Pester, Checkov custom rules)
+**Step 2 — Wire the module in main.bicep:**
+
+```
+Update main.bicep to call modules/storage.bicep twice:
+once for 'app' tier storage and once for 'logs' tier storage,
+using different workloadName values. Surface both module outputs.
+```
+
+**Step 3 (if time):**
+```
+Add a module call for modules/keyvault.bicep.
+Grant the app storage account's managed identity
+the Key Vault Secrets User role on the Key Vault.
+Pass the principalId output from the storage module into the keyvault module.
+```
+
+> "Copilot just wired two modules together using outputs as inputs — the composition pattern at the heart of good Bicep architecture."
+
+---
+
+## Module 5: Workflow and Boundaries (~10 min)
+
+### The Review Contract
+
+> "Let's be explicit about where Copilot sits in the workflow."
+
+```
+[Copilot] → draft Bicep resource or module
+     ↓
+[az bicep build]           — catch syntax errors immediately
+     ↓
+[az deployment what-if]    — verify intent before any change
+     ↓
+[PSRule for Azure]         — policy gate (CI, non-negotiable)
+     ↓
+[PR review]                — human judgment on design and security
+     ↓
+[Pipeline deploy]          — approved change applied
+```
+
+> "Copilot accelerates step one. It does not replace any downstream step. PSRule runs regardless of whether Copilot or a human wrote the line."
+
+### High Value vs. Caution
+
+**High Value for Bicep:**
+- First draft of any resource block
+- `@description()`, `@allowed()`, `@secure()` decorator generation
+- Module skeleton and param wiring
+- `guid()` for idempotent role assignment names
+- `/explain` on inherited or unfamiliar files
+- Translating ARM JSON snippets to Bicep
 
 **Additional Caution:**
-- IAM/RBAC assignments — may suggest overly broad roles
-- Network security rules — may generate permissive rules
-- Secret handling — never output secrets, always use `sensitive = true`
-- `lifecycle` blocks — `prevent_destroy` / `ignore_changes` can mask drift
-- Provider version pinning — always review constraint operators
-
----
-
-## Module 5: Hands-On Exercises (~15 min)
-
-### Exercise 1 — Scaffold (8 min)
-
-> "Open `terraform/00-start-here/main.tf` or `bicep/00-start-here/main.bicep`. The comment at the top describes what to build. Use Copilot to generate it, then use Chat to review it. Don't accept the first output uncritically."
-
-Circulate and observe. Common teaching moments:
-- Did Copilot miss `public_network_access_enabled = false`? Point it out.
-- Did it suggest a hard-coded name? Ask how to fix that.
-
-### Exercise 2 — Explain and Improve (7 min)
-
-> "Open `bicep/02-explain-exercise/main.bicep`. Ask Copilot: 'Review this file for security concerns.' Pick one suggestion and ask it to implement the fix. Then look at the diff — would you accept this in a PR? Why or why not?"
+- RBAC role assignments — verify least-privilege; Copilot may suggest broad built-ins
+- Network security rules — run PSRule after; `allow *` rules are a common miss
+- Secret outputs — check that no sensitive value appears in an output
+- `existing` references — verify the resource actually exists in the target scope
 
 ---
 
 ## Closing (2 min)
 
-> "Three things to take back to your team today:
-> 1. Add a `.github/copilot-instructions.md` to your IaC repos — it takes 10 minutes and immediately improves suggestion quality.
+> "Three things to take back today:
+> 1. Add `.github/copilot-instructions.md` to your Bicep repos — 10 minutes of setup, immediate improvement.
 > 2. Use `/explain` on files your team doesn't fully understand — it's a documentation tool.
-> 3. Keep your policy gates in the pipeline. Copilot is the accelerator; the gates are the guardrails."
+> 3. Front-load your constraints in prompts — Copilot encodes your policy as code, not as a review comment."
 
 ---
 
-## Backup Prompts (if demos stall)
+## Backup Prompts (if a demo stalls)
 
 ```
-# If inline completions aren't triggering:
-"Write a Terraform azurerm_storage_account resource that disables public access
-and enables soft delete."
+# If completions are not triggering:
+"Write a Bicep resource block for an Azure Key Vault that disables public
+network access and enables RBAC authorization."
 
-# If audience wants a live translate demo:
-"Convert this Terraform storage account resource to its Bicep equivalent.
-Highlight the three most important syntax differences."
+# If audience wants a Terraform comparison:
+"Show me the Terraform equivalent of this Bicep storage account block.
+What are the three most important syntax differences?"
 
 # If audience asks about hallucinations:
-"What Terraform provider version introduced the public_network_access_enabled
-argument for azurerm_storage_account, and how would I verify this?"
-# (Expected: Copilot will answer; always verify against registry.terraform.io)
+"What Bicep API version introduced the publicNetworkAccess property
+on Microsoft.Storage/storageAccounts, and how would I verify this?"
+# (Expected: Copilot answers; verify against learn.microsoft.com/bicep)
+
+# If audience asks about Azure Verified Modules:
+"What is the Azure Verified Modules project and how does it relate
+to writing Bicep with Copilot? Should I use AVM modules or write my own?"
 ```

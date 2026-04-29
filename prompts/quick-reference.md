@@ -1,28 +1,33 @@
-# Copilot Prompt Quick Reference — IaC
+# Copilot Prompt Quick Reference — IaC (Bicep)
 ### Keep this open during the session
 
 ---
 
 ## Scaffold — Generate a new resource
 
-```hcl
-# Create [resource type] for [purpose].
-# Constraints:
-#   - [constraint 1]
-#   - [constraint 2]
-#   - [constraint 3]
-# Tags: env, owner, cost-center (use variables with validation)
-resource "azurerm_..." "..." {
-```
-
-**Bicep variant:**
 ```bicep
 // Create [resource type] for [purpose].
 // Constraints:
 //   - [constraint 1]
 //   - [constraint 2]
+//   - [constraint 3]
 // Tags: env, owner, cost-center
-resource myResource 'Microsoft.[Provider]/[type]@2024-03-01' = {
+// No public endpoints
+resource myResource 'Microsoft.[Provider]/[type]@[api-version]' = {
+```
+
+**Add decorators upfront:**
+```bicep
+@description('Purpose of this parameter')
+@allowed([
+  'dev'
+  'staging'
+  'prod'
+])
+param environmentCode string
+
+@secure()
+param adminPassword string
 ```
 
 ---
@@ -87,16 +92,49 @@ Generate: [resource description] that meets all of these constraints.
 
 ---
 
-## Translate — Convert between DSLs
+## Bicep-Specific Patterns
 
+**Derive naming inside a module (enforce conventions):**
+```bicep
+var storageAccountName = 'st${workloadName}${environmentCode}${locationCode}'
 ```
-Convert this Terraform resource to its Bicep equivalent.
-Highlight the three most important syntax differences.
+
+**Reference an existing resource (no redeploy):**
+```bicep
+resource existingKv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: keyVaultName
+}
 ```
+
+**Cross-module output/input wiring:**
+```
+The storage module outputs principalId.
+Wire that into the keyvault module as the identityPrincipalId param.
+Grant it the Key Vault Secrets User role.
+```
+
+**Idempotent role assignment:**
+```bicep
+name: guid(resourceGroup().id, app.id, roleDefId)
+```
+
+---
+
+## Translate — ARM to Bicep
 
 ```
 Convert this ARM template snippet to Bicep.
 Use the existing keyword where resources already exist.
+```
+
+---
+
+## Terraform Reference (comparison only)
+
+```hcl
+# Create [resource type] for [purpose].
+# Constraints: [list]
+resource "azurerm_..." "..." {
 ```
 
 ---
