@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "cae-demo-dev-eus"
+    },
+    "appName": {
+      "value": "orders-service"
+    },
+    "containerImage": {
+      "value": "myregistry.azurecr.io/orders:latest"
+    },
+    "acrName": {
+      "value": "acrdemodeveus"
+    },
+    "tags": {
+      "value": {
+        "env": "dev",
+        "owner": "platform-team",
+        "cost-center": "cc-1234"
+      }
+    }
+  }
+}

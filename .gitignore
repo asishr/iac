@@ -1,0 +1,24 @@
+# Terraform state and sensitive files
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Bicep build output
+*.json
+!*.parameters.json
+!bicep/**/main.parameters.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*.log
