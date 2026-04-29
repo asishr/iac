@@ -16,6 +16,7 @@
   - `bicep/02-refactor-before/main.bicep`
   - `bicep/03-security-review/main.bicep`
   - `bicep/04-modules/main.bicep`
+  - `bicep/05-avm/main.bicep`
 
 ---
 
@@ -271,7 +272,77 @@ Pass the principalId output from the storage module into the keyvault module.
 
 ---
 
-## Module 5: Workflow and Boundaries (~10 min)
+## Module 5: Azure Verified Modules (~15 min)
+
+**Open `bicep/05-avm/main.bicep`**
+
+> "So far we've written resource blocks and wrapped them in local modules. The next stage is Azure Verified Modules — Microsoft-published, WAF-aligned, pre-built Bicep modules from the public registry. Think of it as the module you would have written eventually, already written, tested, and Policy-reviewed."
+
+### Part A — Discovery
+
+In Copilot Chat (no file open):
+```
+What is the Azure Verified Modules registry path for a Storage Account?
+What is the latest stable version available?
+What are the required parameters for the minimum viable module block?
+```
+
+> "Copilot knows the AVM registry. Use it to discover module paths and params instead of browsing the docs manually."
+
+### Part B — Compare: raw resource vs AVM
+
+Open `bicep/03-security-review/main.bicep` alongside `bicep/05-avm/main.bicep`.
+
+```
+If I use the AVM Storage Account module instead of writing the resource block directly,
+which of the 8 security issues in bicep/03-security-review/main.bicep are addressed
+automatically by AVM defaults?
+```
+
+> "AVM's answer to security review: the defaults are the fix. You don't write the security controls — they're built into the module."
+
+### Part C — Fill the module blocks
+
+**Step 1 — Storage module block:**
+```
+Generate a Bicep module block that uses the AVM Storage Account module
+(br/public:avm/res/storage/storage-account) to deploy a storage account with:
+- Name: 'st${workloadName}${environmentCode}'
+- Location and tags from params in this file
+- Blob soft delete enabled (7 days)
+Show the module block and required params.
+```
+
+**Step 2 — Key Vault + RBAC:**
+```
+Now add an AVM Key Vault module block (br/public:avm/res/key-vault/vault).
+Use RBAC authorization mode.
+Grant the storage account's managed identity the Key Vault Secrets User role
+using the AVM module's built-in roleAssignments parameter.
+```
+
+> "Notice: RBAC grant is a parameter of the module, not a separate resource block. AVM collapses what used to be 3 resources into 1 module call."
+
+**Step 3 — Standard AVM params:**
+```
+What standard parameters do ALL AVM resource modules accept?
+Show me how to add a resource lock and diagnostic settings to the Key Vault module block.
+```
+
+> "Every AVM module has the same interface for lock, tags, roleAssignments, diagnosticSettings, privateEndpoints. Learn it once, use it everywhere."
+
+### Part D — Versioning
+
+```
+How do I check for newer versions of an AVM module?
+What is the recommended version pinning strategy for production?
+```
+
+> "AVM versions are semver. Pin to a version, review the changelog on upgrade — same discipline as any dependency."
+
+---
+
+## Module 6: Workflow and Boundaries (~10 min)
 
 ### The Review Contract
 
@@ -336,7 +407,7 @@ What are the three most important syntax differences?"
 on Microsoft.Storage/storageAccounts, and how would I verify this?"
 # (Expected: Copilot answers; verify against learn.microsoft.com/bicep)
 
-# If audience asks about Azure Verified Modules:
-"What is the Azure Verified Modules project and how does it relate
-to writing Bicep with Copilot? Should I use AVM modules or write my own?"
+# If audience asks about AVM vs hand-written Bicep:
+"What are the tradeoffs between using an Azure Verified Module vs writing
+a Bicep resource block directly? When would you choose each approach?"
 ```

@@ -1,5 +1,5 @@
 # GitHub Copilot in the IDE — Practical Tips for IaC
-### Session 2 Demo Repository · Bicep Focus
+### Demo Repository · Bicep Focus
 
 A hands-on demo repository for showing GitHub Copilot techniques with **Azure Bicep** to engineering and IaC practitioner audiences. Terraform examples are included as reference/comparison only.
 
@@ -35,9 +35,10 @@ copilot-iac-demo/
 │   ├── 02-refactor-before/         ← Exercise 3: Extract hard-coded values
 │   ├── 03-security-review/         ← Exercise 4: Find 8 security issues
 │   └── 04-modules/                 ← Exercise 5: Build reusable Bicep modules
-│       └── modules/
-│           ├── storage.bicep       ← Placeholder — Copilot fills it in live
-│           └── keyvault.bicep      ← Placeholder — Copilot fills it in live
+│   │   └── modules/
+│   │       ├── storage.bicep       ← Placeholder — Copilot fills it in live
+│   │       └── keyvault.bicep      ← Placeholder — Copilot fills it in live
+│   └── 05-avm/                     ← Exercise 6: Consume Azure Verified Modules
 ├── terraform/                      ← Reference / comparison content only
 │   ├── 01-scaffold-example/
 │   ├── 02-refactor-before/
@@ -57,7 +58,8 @@ copilot-iac-demo/
 | **3. Explain & learn** | 15 min | `bicep/02-explain-exercise/` |
 | **4. Refactor & security review** | 20 min | `bicep/02-refactor-before/`, `bicep/03-security-review/` |
 | **5. Bicep modules** | 15 min | `bicep/04-modules/` |
-| **6. Workflow & boundaries** | 10 min | Discussion + pipeline diagram |
+| **6. Azure Verified Modules** | 15 min | `bicep/05-avm/` |
+| **7. Workflow & boundaries** | 10 min | Discussion + pipeline diagram |
 
 See [DEMO-SCRIPT.md](DEMO-SCRIPT.md) for presenter talking points and exact prompts.
 
@@ -70,8 +72,9 @@ See [DEMO-SCRIPT.md](DEMO-SCRIPT.md) for presenter talking points and exact prom
 3. **Break tasks into reviewable steps** — mirrors good PR practice
 4. **Use `/explain` aggressively** — for learning, onboarding, and understanding legacy code
 5. **Bicep modules = reuse and guardrails** — modules let teams encode policy as code
-6. **Copilot accelerates; PSRule/Azure Policy protect** — keep gates in the pipeline
-7. **IAM, network rules, and secrets always get a human second look**
+6. **Azure Verified Modules = Copilot + pre-tested best practices** — WAF-aligned defaults, standardized interface
+7. **Copilot accelerates; PSRule/Azure Policy protect** — keep gates in the pipeline
+8. **IAM, network rules, and secrets always get a human second look**
 
 ---
 
@@ -85,3 +88,5 @@ See [DEMO-SCRIPT.md](DEMO-SCRIPT.md) for presenter talking points and exact prom
 | Module param wiring | Connecting outputs from one module to params of another |
 | `az deployment what-if` | Generating the right CLI command for the template |
 | `dependsOn` vs implicit deps | Copilot explains when explicit deps are and aren't needed |
+| AVM module parameters | Discovering required vs optional params, understanding WAF-aligned defaults |
+| AVM `roleAssignments` param | Generating RBAC grants using the standardized AVM interface |

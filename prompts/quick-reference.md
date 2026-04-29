@@ -120,6 +120,49 @@ name: guid(resourceGroup().id, app.id, roleDefId)
 
 ---
 
+## Azure Verified Modules (AVM)
+
+**Discover a module:**
+```
+What is the AVM registry path for [resource type]?
+What is the latest stable version and minimum required parameters?
+```
+
+**Generate a module block:**
+```
+Generate a Bicep module block using the AVM [resource type] module
+(br/public:avm/res/[provider]/[resource]:<version>) with:
+- [param 1]
+- [param 2]
+- [requirement]
+```
+
+**Compare AVM defaults to hand-written code:**
+```
+Which security best practices are enforced by AVM defaults
+for [resource type], and which still require explicit configuration?
+```
+
+**Add standard AVM cross-cutting params:**
+```
+Add a resource lock (ReadOnly) and diagnostic settings (send to Log Analytics)
+to this AVM module block using the standard lock and diagnosticSettings params.
+```
+
+**RBAC via AVM roleAssignments param:**
+```
+Using the AVM module's roleAssignments parameter,
+grant [identity] the [role name] role on this [resource type].
+```
+
+**Version strategy:**
+```
+What changed between AVM [resource type] module versions [x] and [y]?
+Is it safe to upgrade? Are there breaking parameter changes?
+```
+
+---
+
 ## Translate — ARM to Bicep
 
 ```
