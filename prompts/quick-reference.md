@@ -1,5 +1,4 @@
 # Copilot Prompt Quick Reference — IaC (Bicep)
-### Keep this open during the session
 
 ---
 
